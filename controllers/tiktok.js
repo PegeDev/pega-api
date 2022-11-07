@@ -153,7 +153,7 @@ const getVideoURL = async (req, res) => {
 			}
 		);
 		const request = async (server) => {
-			const createFile = await fs.createWriteStream("./media/" + "PegaTiktok" + "-" + fullname + "-"+dateNow+ ".mp4");
+			const createFile = await fs.createWriteStream("./media/" + "PegaTiktok" + "-" + fullname.replace(' ', '-') + "-"+dateNow+ ".mp4");
 			const req = await axios
 				.get(server, {
 					responseType: "stream",
@@ -168,15 +168,14 @@ const getVideoURL = async (req, res) => {
 			return (req / 1024 ** 2).toFixed(2);
 
 		};
-
-		const local1 = await (`https://${req.headers.host}/` +
+		const local1 = await (`https://${req.hostname}/` +
 			"media/" +
 			"PegaTiktok" +
 			"-" +
 			fullname +
 			"("+dateNow+")" +
 			".mp4");
-
+		
 		const CekSizeFiles = await request(server1);
 		if (!CekSizeFiles) return res.status(500).json({ msg: "Something went wrong!", error: err });
 		await res.send(({

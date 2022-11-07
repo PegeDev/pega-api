@@ -7,6 +7,6 @@ router.get("/",verifyToken, async (req, res) => {
 	await res.status(200).json({status: true, msg: 'this api for pegadev'})
 	
 });
-router.get("/dl",verifyToken, getVideoURL);
+router.get("/dl", getVideoURL);
 
 module.exports = router;

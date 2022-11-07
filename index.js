@@ -34,8 +34,8 @@ app.use(
 app.use(tiktokRoute);
 app.use(authRoute);
 
-app.listen(port, () => {
-	console.log(`Node Started with port=`+port);
+app.listen(5000, () => {
+	console.log(`Node Started with `+5000);
 });
 
 CronJob.initScheduleCronJobs();

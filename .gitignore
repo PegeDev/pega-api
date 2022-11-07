@@ -1,2 +1,5 @@
 request.rest
 /node_modules
+/media/*
+/nginx
+package-lock.json
