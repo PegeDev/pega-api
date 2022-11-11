@@ -216,6 +216,7 @@ const getVideoURL = async (req, res) => {
     });
     await browser.close();
   } catch (err) {
+    console.log(err);
     await res.status(500).json({ msg: "Something went wrong!", error: err });
   }
 };
