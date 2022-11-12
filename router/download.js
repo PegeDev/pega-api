@@ -3,7 +3,7 @@ const { verifyToken } = require("../middleware/Verify");
 const router = express.Router();
 
 router.get("/download/:file", verifyToken, async (req, res) => {
-  const filePath = __dirname + "../media/" + req.params.file;
+  const filePath = __dirname + "/../media/" + req.params.file;
   await res.download(
     filePath,
     req.params.file, // Remember to include file extension
