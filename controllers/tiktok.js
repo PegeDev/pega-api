@@ -176,7 +176,7 @@ const getVideoURL = async (req, res) => {
       return (req / 1024 ** 2).toFixed(2);
     };
     const local1 = await (`https://cdn.pegadev.xyz/` +
-      "media/" +
+      "download/" +
       "PegaSnap" +
       "-" +
       fullname +
