@@ -155,7 +155,7 @@ const getVideoURL = async (req, res) => {
     const request = async (server) => {
       const createFile = await fs.createWriteStream(
         "./media/" +
-          "PegaTiktok" +
+          "PegaSnap" +
           "-" +
           fullname.replace(" ", "-") +
           "-" +
@@ -179,10 +179,9 @@ const getVideoURL = async (req, res) => {
       "download/" +
       "PegaSnap" +
       "-" +
-      fullname +
-      "(" +
+      fullname.replace(" ", "-") +
+      "-" +
       dateNow +
-      ")" +
       ".mp4");
 
     const CekSizeFiles = await request(server1);
