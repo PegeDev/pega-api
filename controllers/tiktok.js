@@ -175,9 +175,9 @@ const getVideoURL = async (req, res) => {
         });
       return (req / 1024 ** 2).toFixed(2);
     };
-    const local1 = await (`https://${req.hostname}/` +
+    const local1 = await (`https://cdn.pegadev.xyz/` +
       "media/" +
-      "PegaTiktok" +
+      "PegaSnap" +
       "-" +
       fullname +
       "(" +
@@ -188,7 +188,7 @@ const getVideoURL = async (req, res) => {
     const CekSizeFiles = await request(server1);
     if (!CekSizeFiles)
       return res.status(500).json({ msg: "Something went wrong!", error: err });
-    await res.send({
+    await res.status(200).json({
       status: "true",
       data: {
         video_info: {
