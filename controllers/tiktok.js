@@ -20,7 +20,7 @@ const getVideoURL = async (req, res) => {
 
     await snaptik.setDefaultNavigationTimeout(0);
     await snaptik.goto("https://snaptik.app/en", {
-      waitUntil: "networkidle2",
+      waitUntil: "domcontentloaded",
     });
 
     await snaptik.waitForSelector("#url");
