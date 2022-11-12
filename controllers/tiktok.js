@@ -4,15 +4,8 @@ const axios = require("axios");
 const getVideoURL = async (req, res) => {
   try {
     const dateNow = Date.now();
-    const regx = new RegExp(
-      "(@[a-zA-z0-9]*|.*)(/.*/|trending.?shareId=)([d]*)"
-    );
-    const idVid = req.query.u;
-    if (!idVid)
-      return res.status(500).json({ status: false, msg: "Forbidden" });
-    if (regx.exec(idVid)[3])
-      return res.status(500).json({ status: false, msg: "url not accept" });
-    const url = `https://m.tiktok.com/v/${regx.exec(idVid)[3]}.html`;
+    const url = req.query.u;
+    if (!url) return res.status(500).json({ status: false, msg: "Forbidden" });
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox"],
