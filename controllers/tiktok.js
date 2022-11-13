@@ -299,6 +299,7 @@ const secondMethod = async (req, res) => {
       },
     });
   } catch (err) {
+    console.log(err);
     res.json({ status: false, msg: "something went wrong" });
   }
 };
