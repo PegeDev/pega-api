@@ -316,6 +316,7 @@ const secondMethod = async (req, res) => {
         cover: request.data.data.cover,
         origin_cover: request.data.data.origin_cover,
         play_count: intToString(request.data.data.play_count),
+        like_count: intToString(request.data.data.digg_count),
         comment_count: intToString(request.data.data.comment_count),
         share_count: intToString(request.data.data.share_count),
         download_count: intToString(request.data.data.download_count),
