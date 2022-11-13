@@ -1,7 +1,8 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const axios = require("axios");
-const getVideoURL = async (req, res) => {
+const { trace } = require("console");
+const firstMethod = async (req, res) => {
   try {
     const dateNow = Date.now();
     const url = req.query.u;
@@ -212,4 +213,16 @@ const getVideoURL = async (req, res) => {
     await res.status(500).json({ msg: "Something went wrong!", error: err });
   }
 };
-module.exports = { getVideoURL };
+
+const secondMethod = async (req, res) => {
+  try {
+    var url = req.query.url;
+    if (!url) return res.json({ status: false, msg: "parameter not found" });
+    var link = `https://www.tikwm.com/api/?url=${url}&count=0&cursor=0&web=0&hd=0 `;
+    const request = await axios.get(link);
+    await res.json(request.data);
+  } catch (err) {
+    res.json({ status: false, msg: "something went wrong" });
+  }
+};
+module.exports = { firstMethod, secondMethod };
