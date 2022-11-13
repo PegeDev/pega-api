@@ -216,21 +216,32 @@ const firstMethod = async (req, res) => {
 
 const secondMethod = async (req, res) => {
   try {
+    const dateNow = Date.now();
+
     var url = req.query.url;
     if (!url) return res.json({ status: false, msg: "parameter not found" });
     var link = `https://www.tikwm.com/api/?url=${url}&count=0&cursor=0&web=0&hd=0 `;
     const request = await axios.get(link);
-    var play = request.data.play;
-    var wmplay = request.data.wmplay;
-    var music = request.data.music;
+    var play = request.data.data.play;
+    var wmplay = request.data.data.wmplay;
+    var music = request.data.data.music;
 
     const down = async (server, type) => {
       let types;
-      if (type === "nowm") return (types = "No-Watermark");
-      if (type === "wm") return (types = "With-Watermark");
-      if (type === "music") return (types = "Music");
+      if (type === "nowm") {
+        types = "No-Watermark";
+      }
+      if (type === "wm") {
+        types = "With-Watermark";
+      }
+      if (type === "music") {
+        types = "Music";
+      }
       const createFile = await fs.createWriteStream(
-        `./media/PegaSnap_${fullname.replace(" ", "-")}_${dateNow}_${types}${
+        `./media/PegaSnap_${request.data.data.author.unique_id.replace(
+          " ",
+          "-"
+        )}_${dateNow}_${types}${
           type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
         }`
       );
@@ -247,7 +258,10 @@ const secondMethod = async (req, res) => {
         });
       return {
         size: (req / 1024 ** 2).toFixed(2),
-        fileName: `PegaSnap_${fullname.replace(" ", "-")}_${dateNow}_${types}${
+        fileName: `PegaSnap_${request.data.data.author.unique_id.replace(
+          " ",
+          "-"
+        )}_${dateNow}_${types}${
           type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
         }`,
       };
@@ -256,6 +270,20 @@ const secondMethod = async (req, res) => {
     const metaPlay = await down(play, "nowm");
     const metaWmPlay = await down(play, "wm");
     const metaMusic = await down(music, "music");
+    const intToString = (value) => {
+      var suffixes = ["", "K", "M", "B", "T"];
+      var suffixNum = Math.floor(("" + value).length / 3);
+      var shortValue = parseFloat(
+        (suffixNum != 0
+          ? value / Math.pow(1000, suffixNum)
+          : value
+        ).toPrecision(2)
+      );
+      if (shortValue % 1 != 0) {
+        shortValue = shortValue.toFixed(1);
+      }
+      return shortValue + suffixes[suffixNum];
+    };
     const NumToTime = (num) => {
       var hours = Math.floor(num / 60);
       var minutes = num % 60;
@@ -267,7 +295,7 @@ const secondMethod = async (req, res) => {
     await res.json({
       status: "true",
       data: {
-        title: request.data.title,
+        title: request.data.data.title,
         nowm: {
           play: `https://cdn.pegadev.xyz/download/${metaPlay.fileName}`,
           size: `${metaPlay.size}mb`,
@@ -278,23 +306,23 @@ const secondMethod = async (req, res) => {
         },
         music: {
           play: `https://cdn.pegadev.xyz/download/${metaMusic.fileName}`,
-          size: metaMusic.size,
-          title: request.data.music_info.title,
-          duration: request.data.music_info.duration,
-          author: request.data.music_info.author,
-          original: request.data.music_info.original,
+          size: `${metaMusic.size}mb`,
+          title: request.data.data.music_info.title,
+          duration: request.data.data.music_info.duration,
+          author: request.data.data.music_info.author,
+          original: request.data.data.music_info.original,
         },
-        duration: NumToTime(request.data.duration),
-        cover: request.data.cover,
-        origin_cover: request.data.origin_cover,
-        play_count: request.data.play_count,
-        comment_count: request.data.comment_count,
-        share_count: request.data.share_count,
-        download_count: request.data.download_count,
+        duration: NumToTime(request.data.data.duration),
+        cover: request.data.data.cover,
+        origin_cover: request.data.data.origin_cover,
+        play_count: intToString(request.data.data.play_count),
+        comment_count: intToString(request.data.data.comment_count),
+        share_count: intToString(request.data.data.share_count),
+        download_count: intToString(request.data.data.download_count),
         author: {
-          fullname: request.data.author.unique_id,
-          nickname: request.data.author.nickname,
-          avatar: request.data.author.avatar,
+          fullname: request.data.data.author.unique_id,
+          nickname: request.data.data.author.nickname,
+          avatar: request.data.data.author.avatar,
         },
       },
     });
