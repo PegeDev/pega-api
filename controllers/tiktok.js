@@ -220,7 +220,84 @@ const secondMethod = async (req, res) => {
     if (!url) return res.json({ status: false, msg: "parameter not found" });
     var link = `https://www.tikwm.com/api/?url=${url}&count=0&cursor=0&web=0&hd=0 `;
     const request = await axios.get(link);
-    await res.json(request.data);
+    var play = request.data.play;
+    var wmplay = request.data.wmplay;
+    var music = request.data.music;
+
+    const down = async (server, type) => {
+      let types;
+      if (type === "nowm") return (types = "No-Watermark");
+      if (type === "wm") return (types = "With-Watermark");
+      if (type === "music") return (types = "Music");
+      const createFile = await fs.createWriteStream(
+        `./media/PegaSnap_${fullname.replace(" ", "-")}_${dateNow}_${types}${
+          type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
+        }`
+      );
+      const req = await axios
+        .get(server, {
+          responseType: "stream",
+        })
+        .then((res) => {
+          res.data.pipe(createFile);
+          createFile.on("finish", () => {
+            createFile.close();
+          });
+          return res.headers["content-length"];
+        });
+      return {
+        size: (req / 1024 ** 2).toFixed(2),
+        fileName: `PegaSnap_${fullname.replace(" ", "-")}_${dateNow}_${types}${
+          type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
+        }`,
+      };
+    };
+
+    const metaPlay = await down(play, "nowm");
+    const metaWmPlay = await down(play, "wm");
+    const metaMusic = await down(music, "music");
+    const NumToTime = (num) => {
+      var hours = Math.floor(num / 60);
+      var minutes = num % 60;
+
+      minutes = String(minutes).length === 1 ? "0" + minutes : minutes;
+      hours = String(hours).length === 1 ? "0" + hours : hours;
+      return hours + ":" + minutes;
+    };
+    await res.json({
+      status: "true",
+      data: {
+        title: request.data.title,
+        nowm: {
+          play: `https://cdn.pegadev.xyz/download/${metaPlay.fileName}`,
+          size: `${metaPlay.size}mb`,
+        },
+        wm: {
+          play: `https://cdn.pegadev.xyz/download/${metaWmPlay.fileName}`,
+          size: `${metaWmPlay.size}mb`,
+        },
+        music: {
+          play: `https://cdn.pegadev.xyz/download/${metaMusic.fileName}`,
+          size: metaMusic.size,
+          title: request.data.music_info.title,
+          duration: request.data.music_info.duration,
+          author: request.data.music_info.author,
+          original: request.data.music_info.original,
+        },
+        duration: NumToTime(request.data.duration),
+        cover: request.data.cover,
+        origin_cover: request.data.origin_cover,
+        play_count: request.data.play_count,
+        comment_count: request.data.comment_count,
+        share_count: request.data.share_count,
+        download_count: request.data.download_count,
+        author: {
+          fullname: request.data.author.unique_id,
+          nickname: request.data.author.nickname,
+          avatar: request.data.author.avatar,
+        },
+      },
+    });
   } catch (err) {
     res.json({ status: false, msg: "something went wrong" });
   }
