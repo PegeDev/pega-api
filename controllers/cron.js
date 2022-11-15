@@ -2,7 +2,7 @@ const cronJob = require("node-cron");
 const fs = require("fs");
 
 exports.initScheduleCronJobs = () => {
-  const cronJobsSchedule = cronJob.schedule("0 0 0 1/1 * ? *", () => {
+  const cronJobsSchedule = cronJob.schedule("0 0 * * *", () => {
     const cek = fs.readdirSync("./media");
     console.log(new Date().toLocaleString());
     if (cek.length > 0) {
