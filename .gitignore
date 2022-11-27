@@ -3,3 +3,4 @@ request.rest
 /media/*
 /nginx
 package-lock.json
+config
