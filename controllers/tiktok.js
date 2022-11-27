@@ -548,12 +548,12 @@ const getTrending = async (req, res) => {
           }
         }
       );
-      return res.json({
+      return res.status(200).json({
         status: true,
         data: resDown,
       });
     } else {
-      return res.json({
+      return res.status(200).json({
         status: true,
         data: readParse.data,
       });

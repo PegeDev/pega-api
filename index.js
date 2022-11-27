@@ -7,7 +7,6 @@ const tiktokRoute = require("./router/tiktok");
 const downloadsRoute = require("./router/download");
 const authRoute = require("./router/auth");
 const db = require("./config/Database");
-const bodyParser = require("body-parser");
 const Files = require("./models/files.js");
 const Users = require("./models/users.js");
 const path = require("path");
@@ -16,7 +15,6 @@ dotenv.config();
 db.sync();
 // Files.drop();
 const app = express();
-app.use(express.static(__dirname + "./media/images"));
 app.use(express.json());
 app.use(
   cors({
