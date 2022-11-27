@@ -9,7 +9,7 @@ exports.initScheduleCronJobs = () => {
       for (var file of cek) {
         fs.unlink(`./media/${file}`, (err) => {
           if (err) return err;
-          if (!err) return console.log("suksess delete file ", file);
+          return console.log("suksess delete file ", file);
         });
       }
     } else {

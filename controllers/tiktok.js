@@ -1,7 +1,10 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const axios = require("axios");
-const { trace } = require("console");
+const Files = require("../models/files");
+const Path = require("path");
+const Queue = require("async-await-queue");
+const path = require("path");
 const firstMethod = async (req, res) => {
   try {
     const dateNow = Date.now();
@@ -176,7 +179,7 @@ const firstMethod = async (req, res) => {
         });
       return (req / 1024 ** 2).toFixed(2);
     };
-    const local1 = await (`https://cdn.pegadev.xyz/` +
+    const local1 = await (`${domain}/` +
       "download/" +
       "PegaSnap" +
       "-" +
@@ -218,32 +221,36 @@ const secondMethod = async (req, res) => {
   try {
     const dateNow = Date.now();
 
+    const downloadImage = async (url, filename) => {
+      const path = Path.resolve("./media/images", filename);
+      const writer = fs.createWriteStream(path);
+
+      const response = await axios({
+        url,
+        method: "GET",
+        responseType: "stream",
+      });
+      response.data.pipe(writer);
+      writer.on("finish", () => {
+        writer.close();
+      });
+      return {
+        filename: filename,
+      };
+    };
     var url = req.query.url;
     if (!url) return res.json({ status: false, msg: "parameter not found" });
     var link = `https://www.tikwm.com/api/?url=${url}&count=0&cursor=0&web=0&hd=0 `;
     const request = await axios.get(link);
     var play = request.data.data.play;
-    var wmplay = request.data.data.wmplay;
     var music = request.data.data.music;
 
     const down = async (server, type) => {
-      let types;
-      if (type === "nowm") {
-        types = "No-Watermark";
-      }
-      if (type === "wm") {
-        types = "With-Watermark";
-      }
-      if (type === "music") {
-        types = "Music";
-      }
       const createFile = await fs.createWriteStream(
         `./media/PegaSnap_${request.data.data.author.unique_id.replace(
           " ",
           "-"
-        )}_${dateNow}_${types}${
-          type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
-        }`
+        )}_${dateNow}${type === "wm" || type === "nowm" ? ".mp4" : ".mp3"}`
       );
       const req = await axios
         .get(server, {
@@ -261,28 +268,119 @@ const secondMethod = async (req, res) => {
         fileName: `PegaSnap_${request.data.data.author.unique_id.replace(
           " ",
           "-"
-        )}_${dateNow}_${types}${
-          type === "wm" || type === "nowm" ? ".mp4" : ".mp3"
-        }`,
+        )}_${dateNow}${type === "wm" || type === "nowm" ? ".mp4" : ".mp3"}`,
       };
     };
-
-    const metaPlay = await down(play, "nowm");
-    const metaWmPlay = await down(play, "wm");
-    const metaMusic = await down(music, "music");
-    const intToString = (value) => {
-      var suffixes = ["", "K", "M", "B", "T"];
-      var suffixNum = Math.floor(("" + value).length / 3);
-      var shortValue = parseFloat(
-        (suffixNum != 0
-          ? value / Math.pow(1000, suffixNum)
-          : value
-        ).toPrecision(2)
-      );
-      if (shortValue % 1 != 0) {
-        shortValue = shortValue.toFixed(1);
+    const randStr = (length) => {
+      const characters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let result = " ";
+      const charactersLength = characters.length;
+      for (let i = 0; i < length; i++) {
+        result += characters.charAt(
+          Math.floor(Math.random() * charactersLength)
+        );
       }
-      return shortValue + suffixes[suffixNum];
+
+      return result;
+    };
+
+    const regFile = async (filename, size) => {
+      try {
+        const token = await randStr(84).replace(" ", "");
+        await Files.create({
+          filename: filename,
+          token: token,
+          filesize: size + "mb",
+          isTrending: false,
+        });
+        return { size, token };
+      } catch (err) {
+        res.json({ status: 0, error: err });
+      }
+    };
+    const metaPlay = await down(play, "nowm").then((el) => {
+      return regFile(el.fileName, el.size);
+    });
+    const metaMusic = await down(music, "music").then((el) => {
+      return regFile(el.fileName, el.size);
+    });
+    const getCover = await downloadImage(
+      request.data.data.cover,
+      `PegaSnap_Cover_${request.data.data.author.unique_id.replace(
+        " ",
+        "-"
+      )}_${dateNow}.jpg`
+    );
+    const getAvatar = await downloadImage(
+      request.data.data.author.avatar,
+      `PegaSnap_Avatar_${request.data.data.author.unique_id.replace(
+        " ",
+        "-"
+      )}_${dateNow}.jpg`
+    );
+    const NumToTime = (num) => {
+      var hours = Math.floor(num / 60);
+      var minutes = num % 60;
+
+      minutes = String(minutes).length === 1 ? "0" + minutes : minutes;
+      hours = String(hours).length === 1 ? "0" + hours : hours;
+      return hours + ":" + minutes;
+    };
+    return res.json({
+      status: "true",
+      data: {
+        title: request.data.data.title,
+        play: `${
+          process.env.HOSTNAME
+        }/tiktok/download?token=${metaPlay.token.replace(" ", "")}`,
+        size: `${metaPlay.size}`,
+
+        duration: NumToTime(request.data.data.duration),
+        cover: `${process.env.HOSTNAME}/tiktok/images/cover/${getCover.filename}`,
+        play_count: request.data.data.play_count,
+        like_count: request.data.data.digg_count,
+        comment_count: request.data.data.comment_count,
+        share_count: request.data.data.share_count,
+        download_count: request.data.data.download_count,
+        author: {
+          fullname: request.data.data.author.unique_id,
+          nickname: request.data.data.author.nickname,
+          avatar: `${process.env.HOSTNAME}/tiktok/images/cover/${getAvatar.filename}`,
+        },
+        music: {
+          play: `${
+            process.env.HOSTNAME
+          }/tiktok/download?token=${metaMusic.token.replace(" ", "")}`,
+          size: `${metaMusic.size}`,
+          title: request.data.data.music_info.title,
+          duration: NumToTime(request.data.data.music_info.duration),
+          author: request.data.data.music_info.author,
+          original: request.data.data.music_info.original,
+        },
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    return res.json({ status: false, msg: "something went wrong" });
+  }
+};
+
+const getTrending = async (req, res) => {
+  try {
+    const dateNow = Date.now();
+    const randStr = (length) => {
+      const characters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let result = " ";
+      const charactersLength = characters.length;
+      for (let i = 0; i < length; i++) {
+        result += characters.charAt(
+          Math.floor(Math.random() * charactersLength)
+        );
+      }
+
+      return result;
     };
     const NumToTime = (num) => {
       var hours = Math.floor(num / 60);
@@ -292,44 +390,164 @@ const secondMethod = async (req, res) => {
       hours = String(hours).length === 1 ? "0" + hours : hours;
       return hours + ":" + minutes;
     };
-    await res.json({
-      status: "true",
-      data: {
-        title: request.data.data.title,
-        nowm: {
-          play: `https://cdn.pegadev.xyz/download/${metaPlay.fileName}`,
-          size: `${metaPlay.size}mb`,
-        },
-        wm: {
-          play: `https://cdn.pegadev.xyz/download/${metaWmPlay.fileName}`,
-          size: `${metaWmPlay.size}mb`,
-        },
-        music: {
-          play: `https://cdn.pegadev.xyz/download/${metaMusic.fileName}`,
-          size: `${metaMusic.size}mb`,
-          title: request.data.data.music_info.title,
-          duration: request.data.data.music_info.duration,
-          author: request.data.data.music_info.author,
-          original: request.data.data.music_info.original,
-        },
-        duration: NumToTime(request.data.data.duration),
-        cover: request.data.data.cover,
-        origin_cover: request.data.data.origin_cover,
-        play_count: request.data.data.play_count,
-        like_count: request.data.data.digg_count,
-        comment_count: request.data.data.comment_count,
-        share_count: request.data.data.share_count,
-        download_count: request.data.data.download_count,
-        author: {
-          fullname: request.data.data.author.unique_id,
-          nickname: request.data.data.author.nickname,
-          avatar: request.data.data.author.avatar,
-        },
-      },
-    });
+    const regFile = async (filename, size) => {
+      try {
+        const token = randStr(84).replace(" ", "");
+        await Files.create({
+          filename: filename,
+          token: token,
+          filesize: size + "mb",
+          isTrending: true,
+        });
+        return { size, token };
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    const down = async (server, type, numb) => {
+      var paths;
+      var filename;
+      if (type === "video") {
+        filename = `${dateNow}${numb}.mp4`;
+        paths = `./media/trending/${dateNow}${numb}.mp4`;
+      } else if (type === "img") {
+        filename = `${dateNow}${numb}.jpg`;
+        paths = `./media/trending/images/${dateNow}${numb}.jpg`;
+      } else if (type === "avatar") {
+        filename = `${dateNow}${numb}.jpg`;
+        paths = `./media/trending/images/avatar/${dateNow}${numb}.jpg`;
+      } else if (type === "music") {
+        filename = `${dateNow}${numb}.mp3`;
+        paths = `./media/trending/music/${dateNow}${numb}.mp3`;
+      } else {
+        filename = `${dateNow}${numb}.mp4`;
+        paths = `./media/trending/${dateNow}${numb}.mp4`;
+      }
+
+      const createFile = fs.createWriteStream(paths);
+      const req = await axios
+        .get(server, {
+          responseType: "stream",
+        })
+        .then((res) => {
+          res.data.pipe(createFile);
+          createFile.on("finish", () => {
+            createFile.close();
+          });
+          return res.headers["content-length"];
+        });
+      return {
+        size: (req / 1024 ** 2).toFixed(2),
+        fileName: filename,
+      };
+    };
+    const read = fs.readFileSync(
+      path.resolve("./media/trending/data/data.json")
+    );
+    const readParse = JSON.parse(read);
+    const dateObject = new Date(readParse.time);
+    const currObject = new Date(dateNow);
+    const currTime = currObject.getDate();
+    const timeToDate = dateObject.getDate();
+    const deleteFiles = (dirs) => {
+      if (fs.existsSync(dirs)) {
+        const readExistDir = fs.readdirSync(dirs);
+        if (readExistDir.length > 0) {
+          for (const file of readExistDir) {
+            Files.destroy({
+              where: {
+                fileName: file,
+              },
+            });
+
+            return fs.unlink(dirs, (err) => {
+              if (err) console.log(err);
+              return true;
+            });
+          }
+        }
+      }
+    };
+    if (timeToDate !== currTime) {
+      await deleteFiles("./media/trending/images");
+      await deleteFiles("./media/trending/images/avatar");
+      await deleteFiles("./media/trending/music");
+      await deleteFiles("./media/trending/");
+      const callApi = await axios.get(
+        `https://www.tikwm.com/api/feed/list?region=ID&count=16`
+      );
+      const playsArr = await callApi.data.data;
+      const resDown = [];
+      for (let i = 0; i < playsArr.length; i++) {
+        const res = await playsArr[i];
+        const resPlay = await playsArr[i].play;
+        const resCover = await playsArr[i].cover;
+        const resAvatar = await playsArr[i].author.avatar;
+        const resMusic = await playsArr[i].music_info.play;
+        const playVideo = await down(resPlay, "video", i).then((el) => {
+          return regFile((fileName = el.fileName), (size = el.size));
+        });
+        const playMusic = await down(resMusic, "music", i).then((el) => {
+          return regFile(el.fileName, el.size);
+        });
+        const cover = await down(resCover, "img", i).then((el) => {
+          return { fileName: el.fileName, size: el.size };
+        });
+        const avatar = await down(resAvatar, "avatar", i).then((el) => {
+          return { fileName: el.fileName, size: el.size };
+        });
+        const hostname = `${process.env.HOSTNAME}/tiktok`;
+        await resDown.push({
+          title: res.title,
+          cover: `${hostname}/images/cover/${cover.fileName}?trending=1`,
+          play: `${hostname}/download/?token=${playVideo.token}`,
+          size: `${playVideo.size} mb`,
+          duration: NumToTime(res.duration),
+          play_count: res.play_count,
+          share_count: res.share_count,
+          comment_count: res.comment_count,
+          like_count: res.digg_count,
+          download_count: res.download_count,
+          author: {
+            fullname: res.author.unique_id,
+            nickname: res.author.nickname,
+            avatar: `${hostname}/images/cover/${avatar.fileName}?trending=1&avatar=1`,
+          },
+          music: {
+            title: res.music_info.title,
+            play: `${hostname}/download/?token=${playMusic.token}`,
+            duration: NumToTime(res.music_info.duration),
+          },
+        });
+      }
+      var jsonContent = await JSON.stringify({
+        time: dateNow,
+        data: resDown,
+      });
+      await fs.writeFile(
+        "./media/trending/data/data.json",
+        jsonContent,
+        "utf8",
+        function (err) {
+          if (err) {
+            console.log("An error occured while writing JSON Object to File.");
+            return console.log(err);
+          }
+        }
+      );
+      return res.json({
+        status: true,
+        data: resDown,
+      });
+    } else {
+      return res.json({
+        status: true,
+        data: readParse.data,
+      });
+    }
   } catch (err) {
-    console.log(err);
-    res.json({ status: false, msg: "something went wrong" });
+    await console.log(err);
+    await res.status(500).json({ msg: err });
   }
 };
-module.exports = { firstMethod, secondMethod };
+module.exports = { firstMethod, secondMethod, getTrending };
