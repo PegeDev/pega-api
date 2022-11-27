@@ -444,6 +444,19 @@ const getTrending = async (req, res) => {
     const read = fs.readFileSync(
       path.resolve("./media/trending/data/data.json")
     );
+    if (!read) {
+      await fs.writeFile(
+        "./media/trending/data/data.json",
+        JSON.stringify({ time: 0, data: [] }),
+        "utf8",
+        function (err) {
+          if (err) {
+            console.log("An error occured while writing JSON Object to File.");
+            return console.log(err);
+          }
+        }
+      );
+    }
     const readParse = JSON.parse(read);
     const dateObject = new Date(readParse.time);
     const currObject = new Date(dateNow);
