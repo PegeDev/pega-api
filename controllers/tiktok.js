@@ -555,7 +555,7 @@ const getTrending = async (req, res) => {
     } else {
       return res.status(200).json({
         status: true,
-        data: readParse.data,
+        data: JSON.stringify(readParse.data),
       });
     }
   } catch (err) {
