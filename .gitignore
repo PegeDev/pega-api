@@ -1,10 +1,8 @@
 request.rest
 /node_modules
-/media/*.mp4
-/media/*/*/*.mp3
-/media/*/*.mp4
-/media/*/*/*.jpg
-/media/*/*/*/*.jpg
+*.mp4
+*.mp3
+*.jpg
 /nginx
 package-lock.json
 ../config
