@@ -5,4 +5,4 @@ request.rest
 *.jpg
 /nginx
 package-lock.json
-../config
+/config/*
