@@ -548,14 +548,16 @@ const getTrending = async (req, res) => {
           }
         }
       );
+      res.set("Content-Type", "application/json");
       return res.status(200).json({
         status: true,
         data: resDown,
       });
     } else {
+      res.set("Content-Type", "application/json");
       return res.status(200).json({
         status: true,
-        data: JSON.parse(readParse.data),
+        data: readParse.data,
       });
     }
   } catch (err) {
