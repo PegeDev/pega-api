@@ -482,13 +482,8 @@ const getTrending = async (req, res) => {
         }
       }
     };
-    const call = async () => {
-      const callApi = await axios.get(
-        `https://www.tikwm.com/api/feed/list?region=ID&count=16`
-      );
-      const playsArr = await callApi.data.data;
+    const call = async (playsArr) => {
       const resDown = [];
-      console.log(playsArr);
       for (let i = 0; i < playsArr.length; i++) {
         const res = await playsArr[i];
         const resPlay = await playsArr[i].play;
@@ -555,10 +550,13 @@ const getTrending = async (req, res) => {
       deleteFiles("./media/trending/images/avatar");
       deleteFiles("./media/trending/music");
       deleteFiles("./media/trending/");
-
+      const callApi = await axios.get(
+        `https://www.tikwm.com/api/feed/list?region=ID&count=16`
+      );
+      const playsArr = await callApi.data.data;
       const resDown = [];
-      await call().then((res) => {
-        resDown = res;
+      await call(playsArr).then(() => {
+        resDown.push(resDown);
       });
       res.set("Content-Type", "application/json");
       return res.status(200).json({
@@ -566,22 +564,14 @@ const getTrending = async (req, res) => {
         data: resDown,
       });
     } else {
-      var resDown = [];
       res.set("Content-Type", "application/json");
-      console.log(readParse.data === "");
-      if (readParse.data.length === 0) {
-        await call().then((res) => {
-          resDown = res.resDown;
-        });
-        console.log(resDown);
-      }
       return res.status(200).json({
         status: true,
-        data: resDown,
+        data: readParse.data,
       });
     }
   } catch (err) {
-    await console.log(err);
+    // await console.log(err);
     await res.status(500).json({ msg: err });
   }
 };
