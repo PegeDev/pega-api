@@ -482,10 +482,10 @@ const getTrending = async (req, res) => {
       }
     };
     if (timeToDate !== currTime) {
-      await deleteFiles("./media/trending/images");
-      await deleteFiles("./media/trending/images/avatar");
-      await deleteFiles("./media/trending/music");
-      await deleteFiles("./media/trending/");
+      deleteFiles("./media/trending/images");
+      deleteFiles("./media/trending/images/avatar");
+      deleteFiles("./media/trending/music");
+      deleteFiles("./media/trending/");
       const callApi = await axios.get(
         `https://www.tikwm.com/api/feed/list?region=ID&count=16`
       );
@@ -533,11 +533,11 @@ const getTrending = async (req, res) => {
           },
         });
       }
-      var jsonContent = await JSON.stringify({
+      var jsonContent = JSON.stringify({
         time: dateNow,
         data: resDown,
       });
-      await fs.writeFile(
+      fs.writeFile(
         "./media/trending/data/data.json",
         jsonContent,
         "utf8",
@@ -561,7 +561,7 @@ const getTrending = async (req, res) => {
       });
     }
   } catch (err) {
-    await console.log(err);
+    // await console.log(err);
     await res.status(500).json({ msg: err });
   }
 };
