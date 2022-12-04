@@ -5,7 +5,7 @@ const Files = require("../models/files");
 const router = express.Router();
 
 router.get("/tiktok/download/", async (req, res) => {
-  const { token, preview, trending } = req.query;
+  const { token, preview, music, keyword, trending } = req.query;
   try {
     console.log(token);
     const cek = await Files.findOne({
@@ -22,10 +22,17 @@ router.get("/tiktok/download/", async (req, res) => {
     if (trending || trending === 1) {
       paths = `./media/trending/${filename}`;
       fileNameDown = `PegaSnap-Trending-${cek.filename}`;
+    } else if (keyword || keyword === 1) {
+      paths = `./media/keywords/videos/${filename}`;
+      fileNameDown = `PegaSnap-Keywords-${cek.filename}`;
+    } else if (music || music === 1) {
+      paths = `./media/trending/music/${filename}`;
+      fileNameDown = `PegaSnap-Trending-${cek.filename}`;
     } else {
       paths = `./media/${filename}`;
       fileNameDown = filename;
     }
+    console.log(paths);
     const filePath = path.resolve(paths);
     if (preview || preview === 1) {
       const videoPath = filePath;
@@ -33,7 +40,7 @@ router.get("/tiktok/download/", async (req, res) => {
       const fileSize = videoStat.size;
       const head = {
         "Content-Length": fileSize,
-        "Content-Type": "video/mp4",
+        "Content-Type": !music || music !== 1 ? "video/mp4" : "audio/mpeg",
       };
       res.writeHead(200, head);
       fs.createReadStream(videoPath).pipe(res);
@@ -54,7 +61,7 @@ router.get("/tiktok/download/", async (req, res) => {
 });
 router.get("/tiktok/images/cover/:filename", async (req, res) => {
   const { filename } = req.params;
-  const { trending, avatar } = req.query;
+  const { trending, keyword, avatar } = req.query;
   if (!filename)
     return res.status(404).json({ status: false, msg: "File Not Found" });
   let paths;
@@ -62,6 +69,11 @@ router.get("/tiktok/images/cover/:filename", async (req, res) => {
     paths = `./media/trending/images/${filename}`;
     if (avatar || avatar === 1) {
       paths = `./media/trending/images/avatar/${filename}`;
+    }
+  } else if (keyword || keyword === 1) {
+    paths = `./media/keywords/cover/${filename}`;
+    if (avatar || avatar === 1) {
+      paths = `./media/keywords/avatar/${filename}`;
     }
   } else {
     paths = `./media/images/${filename}`;

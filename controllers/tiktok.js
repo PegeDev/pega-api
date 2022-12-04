@@ -463,27 +463,37 @@ const getTrending = async (req, res) => {
     const currTime = currObject.getDate();
     const timeToDate = dateObject.getDate();
     const deleteFiles = (dirs) => {
-      if (fs.existsSync(dirs)) {
-        const readExistDir = fs.readdirSync(dirs);
-        if (readExistDir.length > 0) {
-          for (const file of readExistDir) {
-            console.log(readExistDir);
+      try {
+        fs.readdir(path.resolve(__dirname + dirs), (err, files) => {
+          if (err) throw err;
+          for (const file of files) {
+            console.log(file);
             Files.destroy({
               where: {
                 fileName: file,
               },
             });
 
-            return fs.unlink(dirs, (err) => {
-              if (err) console.log(err);
-              return true;
-            });
+            fs.unlink(
+              path.join(path.resolve(__dirname + dirs), file),
+              (err) => {
+                if (err) return console.log(err);
+                return console.log(`Sukses Delete File ${file}`);
+              }
+            );
           }
-        }
+        });
+      } catch (err) {
+        console.log(err);
       }
     };
-    const call = async (playsArr) => {
+    const call = async () => {
       const resDown = [];
+      const callApi = await axios.get(
+        `https://www.tikwm.com/api/feed/list?region=ID&count=16`
+      );
+
+      const playsArr = await callApi.data.data;
       for (let i = 0; i < playsArr.length; i++) {
         const res = await playsArr[i];
         const resPlay = await playsArr[i].play;
@@ -505,8 +515,8 @@ const getTrending = async (req, res) => {
         const hostname = `${process.env.HOSTNAME}/tiktok`;
         await resDown.push({
           title: res.title,
-          cover: `${hostname}/images/cover/${cover.fileName}?trending=1`,
-          play: `${hostname}/download/?token=${playVideo.token}`,
+          cover: `${hostname}/tiktok/images/cover/${cover.fileName}?trending=1`,
+          play: `${hostname}/tiktok/download/?token=${playVideo.token}&trending=1`,
           size: `${playVideo.size} mb`,
           duration: NumToTime(res.duration),
           play_count: res.play_count,
@@ -517,11 +527,11 @@ const getTrending = async (req, res) => {
           author: {
             fullname: res.author.unique_id,
             nickname: res.author.nickname,
-            avatar: `${hostname}/images/cover/${avatar.fileName}?trending=1&avatar=1`,
+            avatar: `${hostname}/tiktok/images/cover/${avatar.fileName}?trending=1&avatar=1`,
           },
           music: {
             title: res.music_info.title,
-            play: `${hostname}/download/?token=${playMusic.token}`,
+            play: `${hostname}/tiktok/download/?token=${playMusic.token}&music=1`,
             duration: NumToTime(res.music_info.duration),
           },
         });
@@ -546,17 +556,14 @@ const getTrending = async (req, res) => {
       };
     };
     if (timeToDate !== currTime) {
-      deleteFiles("./media/trending/images");
-      deleteFiles("./media/trending/images/avatar");
-      deleteFiles("./media/trending/music");
-      deleteFiles("./media/trending/");
-      const callApi = await axios.get(
-        `https://www.tikwm.com/api/feed/list?region=ID&count=16`
-      );
-      const playsArr = await callApi.data.data;
+      await deleteFiles("/../media/trending/images");
+      await deleteFiles("/../media/trending/images/avatar");
+      await deleteFiles("/../media/trending/music");
+      await deleteFiles("/../media/trending/");
+
       const resDown = [];
-      await call(playsArr).then(() => {
-        resDown.push(resDown);
+      await call().then((res) => {
+        resDown.push(res.resDown);
       });
       res.set("Content-Type", "application/json");
       return res.status(200).json({
@@ -564,15 +571,169 @@ const getTrending = async (req, res) => {
         data: resDown,
       });
     } else {
-      res.set("Content-Type", "application/json");
+      res.set(
+        "Content-Type",
+        "application/json",
+        "Accept-Encoding",
+        "application/json"
+      );
       return res.status(200).json({
         status: true,
         data: readParse.data,
       });
     }
   } catch (err) {
-    // await console.log(err);
+    await console.log(err);
     await res.status(500).json({ msg: err });
   }
 };
-module.exports = { firstMethod, secondMethod, getTrending };
+const getByKeyword = async (req, res) => {
+  const { q } = req.query;
+  const dateNow = Date.now();
+  const hostname = process.env.HOSTNAME;
+  if (!q) return res.status(500).json({ msg: "Err" });
+  const deleteFiles = (dirs) => {
+    try {
+      fs.readdir(path.resolve(__dirname + dirs), (err, files) => {
+        if (err) throw err;
+        for (const file of files) {
+          console.log(file);
+          Files.destroy({
+            where: {
+              fileName: file,
+            },
+          });
+
+          fs.unlink(path.join(path.resolve(__dirname + dirs), file), (err) => {
+            if (err) return console.log(err);
+            return console.log(`Sukses Delete File ${file}`);
+          });
+        }
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const randStr = (length) => {
+    const characters =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let result = " ";
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+
+    return result;
+  };
+  const regFile = async (filename, size) => {
+    try {
+      const token = randStr(84).replace(" ", "");
+      await Files.create({
+        filename: filename,
+        token: token,
+        filesize: size + "mb",
+        isTrending: false,
+      });
+      return { size, token, fileName };
+    } catch (err) {
+      console.log(err);
+    }
+  };
+  const down = async (server, type, numb) => {
+    var paths;
+    var filename;
+    if (type === "video") {
+      filename = `${dateNow}${numb}.mp4`;
+      paths = `./media/keywords/videos/${dateNow}${numb}.mp4`;
+    } else if (type === "img") {
+      filename = `${dateNow}${numb}.jpg`;
+      paths = `./media/keywords/cover/${dateNow}${numb}.jpg`;
+    } else if (type === "avatar") {
+      filename = `${dateNow}${numb}.jpg`;
+      paths = `./media/keywords/avatar/${dateNow}${numb}.jpg`;
+    } else {
+      filename = `${dateNow}${numb}.mp4`;
+      paths = `./media/keywords/videos/${dateNow}${numb}.mp4`;
+    }
+
+    const createFile = fs.createWriteStream(paths);
+    const req = await axios
+      .get(server, {
+        responseType: "stream",
+      })
+      .then((res) => {
+        res.data.pipe(createFile);
+        createFile.on("finish", () => {
+          createFile.close();
+        });
+        return res.headers["content-length"];
+      });
+    return {
+      size: (req / 1024 ** 2).toFixed(2),
+      fileName: filename,
+    };
+  };
+  try {
+    await deleteFiles("/../media/keywords/");
+    await deleteFiles("/../media/keywords/videos");
+    await deleteFiles("/../media/keywords/avatar");
+    await deleteFiles("/../media/keywords/cover");
+    const callApi = await axios({
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept-Encoding": "application/json",
+      },
+      url: "https://www.tikwm.com/api/feed/search",
+      params: {
+        keywords: q,
+        count: 16,
+        cursor: false,
+      },
+    });
+    if (callApi.status !== 200 || callApi.data.code === -1)
+      return res.status(500).json({ msg: "error" });
+    const resData = callApi.data.data.videos;
+    const resDown = [];
+
+    for (var i = 0; i < resData.length; i++) {
+      const res = await resData[i];
+      const resPlay = await resData[i].play;
+      const resCover = await resData[i].cover;
+      const resAvatar = await resData[i].author.avatar;
+      const playVideo = await down(resPlay, "video", i).then((el) => {
+        return regFile((fileName = el.fileName), (size = el.size));
+      });
+      const cover = await down(resCover, "img", i).then((el) => {
+        return regFile((fileName = el.fileName), (size = el.size));
+      });
+      const avatar = await down(resAvatar, "avatar", i).then((el) => {
+        return regFile((fileName = el.fileName), (size = el.size));
+      });
+      await resDown.push({
+        title: res.title,
+        cover: `${hostname}/tiktok/images/cover/${cover.fileName}?keyword=1`,
+        play: `${hostname}/tiktok/download/?token=${playVideo.token}&keyword=1`,
+        play_count: res.play_count,
+        share_count: res.share_count,
+        comment_count: res.comment_count,
+        like_count: res.digg_count,
+        download_count: res.download_count,
+        author: {
+          fullname: res.author.unique_id,
+          nickname: res.author.nickname,
+          avatar: `${hostname}/tiktok/images/cover/${avatar.fileName}?keyword=1&avatar=1`,
+        },
+      });
+    }
+    res.json({
+      status: true,
+      msg: "success",
+      data: resDown,
+    });
+  } catch (err) {
+    console.log(err);
+  }
+};
+module.exports = { firstMethod, secondMethod, getTrending, getByKeyword };
